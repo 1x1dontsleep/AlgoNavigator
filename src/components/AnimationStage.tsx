@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AnimationStep, StructureState } from '../engine/structures/types'
 
 interface AnimationStageProps {
@@ -43,7 +43,13 @@ export function AnimationStage({
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1)
 
   const atStart = frameIndex === 0
-  const atEnd = frameIndex === frames.length - 1
+  const lastFrameIndex = frames.length - 1
+  const atEnd = frameIndex === lastFrameIndex
+
+  const stepForward = useCallback(() => {
+    setFrameIndex((index) => Math.min(index + 1, lastFrameIndex))
+    if (frameIndex + 1 >= lastFrameIndex) setIsPlaying(false)
+  }, [frameIndex, lastFrameIndex])
 
   useEffect(() => {
     onFrameChange?.(frameIndex, atEnd)
@@ -51,12 +57,9 @@ export function AnimationStage({
 
   useEffect(() => {
     if (!isPlaying || atEnd) return
-    const timer = setTimeout(() => {
-      setFrameIndex((index) => Math.min(index + 1, frames.length - 1))
-      if (frameIndex + 1 >= frames.length - 1) setIsPlaying(false)
-    }, BASE_INTERVAL_MS / speed)
+    const timer = setTimeout(stepForward, BASE_INTERVAL_MS / speed)
     return () => clearTimeout(timer)
-  }, [isPlaying, atEnd, speed, frames.length, frameIndex])
+  }, [isPlaying, atEnd, speed, stepForward])
 
   return (
     <div>
@@ -77,13 +80,7 @@ export function AnimationStage({
         >
           {isPlaying ? 'Pause' : 'Play'}
         </button>
-        <button
-          type="button"
-          onClick={() =>
-            setFrameIndex((index) => Math.min(index + 1, frames.length - 1))
-          }
-          disabled={atEnd}
-        >
+        <button type="button" onClick={stepForward} disabled={atEnd}>
           Step forward
         </button>
         <label>

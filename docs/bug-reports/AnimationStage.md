@@ -16,6 +16,9 @@
   through every frame automatically and the control flips back to "Play"
   (not stuck showing "Pause") once the sequence ends, and is disabled
   there (nothing left to play).
+- **Manual completion during playback**: stepping forward to the last
+  frame while playing stops playback. Stepping back afterward leaves the
+  previous frame on screen until Play is pressed again.
 
 This file intentionally uses a trivial `render` prop
 (`state => <div>{...joined values...}</div>`) instead of `StackRenderer`,
@@ -36,9 +39,9 @@ The "Play / auto-stop" case specifically guards a real bug fixed during
 Phase 1: an earlier version called `setIsPlaying(false)` synchronously in
 the effect body when `atEnd` was true, which ESLint's
 `react-hooks/set-state-in-effect` rule flagged. The fix moved that
-decision inside the `setTimeout` callback instead. This test exercises
-the actual runtime behavior (reaching the end during an active "Play"
-auto-stops it) that fix needs to preserve, not just the lint rule.
+decision inside the `setTimeout` callback. The timer and the Step forward
+button now share that logic so either way of reaching the final frame stops
+playback.
 
 ## Known gaps
 
@@ -54,5 +57,5 @@ auto-stops it) that fix needs to preserve, not just the lint rule.
 
 ## Status
 
-Last verified: 2026-11-06 — 4/4 passing (`npm test`); see
+Last verified: 2026-11-12 — 5/5 passing (`npm test`); see
 [`docs/TEST-RESULTS.md`](../TEST-RESULTS.md) for the per-case record.
