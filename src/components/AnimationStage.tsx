@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AnimationStep, StructureState } from '../engine/structures/types'
 
 interface AnimationStageProps {
@@ -38,12 +38,25 @@ export function AnimationStage({
     [frames],
   )
 
-  const [frameIndex, setFrameIndex] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [{ frameIndex, isPlaying }, setPlayback] = useState({
+    frameIndex: 0,
+    isPlaying: false,
+  })
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1)
 
   const atStart = frameIndex === 0
-  const atEnd = frameIndex === frames.length - 1
+  const lastFrameIndex = frames.length - 1
+  const atEnd = frameIndex === lastFrameIndex
+
+  const stepForward = useCallback(() => {
+    setPlayback((current) => {
+      const nextFrame = Math.min(current.frameIndex + 1, lastFrameIndex)
+      return {
+        frameIndex: nextFrame,
+        isPlaying: current.isPlaying && nextFrame < lastFrameIndex,
+      }
+    })
+  }, [lastFrameIndex])
 
   useEffect(() => {
     onFrameChange?.(frameIndex, atEnd)
@@ -51,12 +64,9 @@ export function AnimationStage({
 
   useEffect(() => {
     if (!isPlaying || atEnd) return
-    const timer = setTimeout(() => {
-      setFrameIndex((index) => Math.min(index + 1, frames.length - 1))
-      if (frameIndex + 1 >= frames.length - 1) setIsPlaying(false)
-    }, BASE_INTERVAL_MS / speed)
+    const timer = setTimeout(stepForward, BASE_INTERVAL_MS / speed)
     return () => clearTimeout(timer)
-  }, [isPlaying, atEnd, speed, frames.length, frameIndex])
+  }, [isPlaying, atEnd, speed, frameIndex, stepForward])
 
   return (
     <div>
@@ -65,25 +75,29 @@ export function AnimationStage({
       <div>
         <button
           type="button"
-          onClick={() => setFrameIndex((index) => Math.max(index - 1, 0))}
+          onClick={() =>
+            setPlayback((current) => ({
+              ...current,
+              frameIndex: Math.max(current.frameIndex - 1, 0),
+            }))
+          }
           disabled={atStart}
         >
           Step back
         </button>
         <button
           type="button"
-          onClick={() => setIsPlaying((playing) => !playing)}
+          onClick={() =>
+            setPlayback((current) => ({
+              ...current,
+              isPlaying: !current.isPlaying,
+            }))
+          }
           disabled={atEnd && !isPlaying}
         >
           {isPlaying ? 'Pause' : 'Play'}
         </button>
-        <button
-          type="button"
-          onClick={() =>
-            setFrameIndex((index) => Math.min(index + 1, frames.length - 1))
-          }
-          disabled={atEnd}
-        >
+        <button type="button" onClick={stepForward} disabled={atEnd}>
           Step forward
         </button>
         <label>

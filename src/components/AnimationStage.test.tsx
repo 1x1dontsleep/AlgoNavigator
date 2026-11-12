@@ -76,6 +76,29 @@ describe('AnimationStage', () => {
       vi.useRealTimers()
     })
 
+    it('stops playback when stepped forward to the final frame', async () => {
+      setup()
+      const stepForward = screen.getByRole('button', { name: 'Step forward' })
+
+      for (let index = 0; index < stackAnimationSteps.length - 1; index++) {
+        fireEvent.click(stepForward)
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+      fireEvent.click(stepForward)
+
+      expect(isDisabled(screen.getByRole('button', { name: 'Play' }))).toBe(
+        true,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Step back' }))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1200)
+      })
+      expect(screen.getByTestId('frame').textContent).toBe('5,8')
+      expect(isDisabled(screen.getByRole('button', { name: 'Play' }))).toBe(
+        false,
+      )
+    })
+
     it('auto-advances through every frame and stops itself at the end', async () => {
       setup()
 
